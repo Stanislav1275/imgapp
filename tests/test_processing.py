@@ -124,6 +124,11 @@ class Edges(unittest.TestCase):
         self.assertEqual(out.shape, g.shape)
         self.assertEqual((int(out[1, 0]), int(out[0, 1]), int(out[1, 1])), (0, 0, 0))
 
+    def test_roberts_normalize(self):
+        g = np.array([[10, 20], [30, 60]], np.uint8)
+        self.assertEqual(int(edges.roberts(g, normalize=True)[0, 0]), 255)
+        self.assertTrue(np.all(edges.roberts(np.full((4, 4), 5, np.uint8), normalize=True) == 0))
+
     def test_roberts_flat_has_no_edges(self):
         self.assertTrue(np.all(edges.roberts(np.full((6, 6), 77, np.uint8)) == 0))
 

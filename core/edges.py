@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 
 
-def roberts(gray):
+def roberts(gray, normalize=False):
     """
     Оператор Робертса — разности по двум диагоналям окна 2x2:
 
@@ -19,6 +19,8 @@ def roberts(gray):
 
     Результат ограничиваем до 255. Размер картинки сохраняется: последняя строка и столбец
     (где окно 2x2 не помещается) остаются нулями.
+    normalize=True растягивает результат так, чтобы самая сильная граница стала 255
+    (для наглядности: слабые границы лучше видны на экране).
     """
     g = gray.astype(np.float64)
     a = g[:-1, :-1]
@@ -30,6 +32,8 @@ def roberts(gray):
     strength = np.sqrt(gx ** 2 + gy ** 2)
     out = np.zeros_like(g)
     out[:-1, :-1] = strength
+    if normalize and out.max() > 0:
+        out = out / out.max() * 255
     return np.clip(np.round(out), 0, 255).astype(np.uint8)
 
 
