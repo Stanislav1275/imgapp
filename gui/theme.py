@@ -37,7 +37,10 @@ QToolBar QToolButton { background: transparent; color: $muted; border: 1px solid
 QToolBar QToolButton:hover { background: $hover; color: $text; }
 QToolBar QToolButton#primary { background: $accent; color: $on_accent; font-weight: 600; }
 QToolBar QToolButton#primary:hover { background: $accent_hover; }
-QToolButton::menu-indicator { image: none; width: 0; }
+QToolButton { background: transparent; color: $muted; border: 1px solid transparent; border-radius: 9px; padding: 7px 14px; }
+QToolButton:hover { background: $hover; color: $text; }
+QToolButton[popupMode="2"] { padding-right: 14px; }
+QToolButton::menu-indicator { image: none; width: 0; height: 0; subcontrol-position: right center; }
 
 QPushButton { background: $accent; color: $on_accent; border: none; border-radius: 9px; padding: 8px 18px; font-weight: 600; }
 QPushButton:hover { background: $accent_hover; }

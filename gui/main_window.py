@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
             action = menu.addAction(SAMPLE_TITLES.get(path.name, path.name))
             action.triggered.connect(lambda checked=False, p=str(path): self.load_path(p))
         examples = QToolButton()
-        examples.setText("Примеры")
+        examples.setText("Примеры  ▾")      # стрелку рисуем текстом: родная стрелка Qt в QSS выходит огромной
         examples.setToolTip("Готовые фотографии из папки samples")
         examples.setMenu(menu)
         examples.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
