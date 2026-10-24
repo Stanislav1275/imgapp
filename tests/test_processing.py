@@ -109,6 +109,15 @@ class Filters(unittest.TestCase):
         flat = np.full((6, 6), 200, np.uint8)
         self.assertTrue(np.all(filters.emboss(flat) == 128))
 
+    def test_salt_pepper_and_median(self):
+        img = np.full((40, 40, 3), 100, np.uint8)
+        noisy = filters.add_salt_pepper(img, 0.1, seed=1)
+        changed = float((noisy != img).any(axis=2).mean())
+        self.assertTrue(0.05 < changed < 0.15)                         # около 10% пикселей испорчено
+        self.assertTrue(np.array_equal(noisy, filters.add_salt_pepper(img, 0.1, seed=1)))   # повторяемо
+        self.assertGreater(float((filters.median(noisy, 3) == 100).mean()), 0.97)   # шум почти убран
+        self.assertTrue(np.all(img == 100))                            # исходник не тронут
+
     def test_median_removes_salt(self):
         img = np.full((7, 7), 100, np.uint8)
         img[3, 3] = 255                                        # одиночная «соль»
