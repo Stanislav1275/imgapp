@@ -99,8 +99,31 @@ def stylesheet(colors):
     return _QSS.substitute(colors)
 
 
+# Готовая библиотека оформления qt-material (pip install qt-material). Если её нет — работает наша тема выше.
+QT_MATERIAL_THEMES = {False: "light_blue.xml", True: "dark_blue.xml"}
+_MATERIAL_COLORS = {
+    False: {"accent": "#03a9f4", "accent_hover": "#0288d1", "view": "#eef1f4", "view_text": "#8a939c",
+            "hist_bg": "#ffffff", "hist_line": "#37474f", "hist_axis": "#90a4ae", "border": "#dfe3e8"},
+    True: {"accent": "#448aff", "accent_hover": "#82b1ff", "view": "#1b1e20", "view_text": "#6b7780",
+           "hist_bg": "#31363b", "hist_line": "#eceff1", "hist_axis": "#78909c", "border": "#3d444a"},
+}
+_EXTRA_QSS = Template("""
+QLabel#imageView { background: $view; color: $view_text; border: 1px solid $border; border-radius: 12px; font-size: 14px; }
+QLabel#imageView[empty="true"] { border: 1px dashed $view_text; }
+QLabel#appTitle { font-size: 15px; font-weight: 600; padding: 0 8px; }
+QLabel#pixelInfo { font-family: "JetBrains Mono", "SF Mono", "Consolas", monospace; font-size: 12px; }
+""")
+
+
 def apply(app, dark=False):
     """Включить тему: запомнить цвета и применить стиль ко всему приложению."""
     COLORS.clear()
     COLORS.update(DARK if dark else LIGHT)
-    app.setStyleSheet(stylesheet(COLORS))
+    try:
+        from qt_material import apply_stylesheet
+        apply_stylesheet(app, theme=QT_MATERIAL_THEMES[dark], invert_secondary=not dark,
+                         extra={"density_scale": "-1", "font_size": "13px"})
+        COLORS.update(_MATERIAL_COLORS[dark])
+        app.setStyleSheet(app.styleSheet() + _EXTRA_QSS.substitute(COLORS))
+    except ImportError:
+        app.setStyleSheet(stylesheet(COLORS))
