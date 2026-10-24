@@ -13,7 +13,7 @@ from pathlib import Path
 from PySide6.QtCore import QSettings
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (QApplication, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
-                               QTabWidget, QToolButton)
+                               QSizePolicy, QTabWidget, QToolButton, QWidget)
 
 from core import colorspaces, imageio
 from gui import theme
@@ -57,14 +57,20 @@ class MainWindow(QMainWindow):
         theme.apply(QApplication.instance(), self.dark)
 
         self.tabs = QTabWidget()
+        self.tabs.setDocumentMode(True)            # плоские вкладки без рамки
         self.setCentralWidget(self.tabs)
         self.tab_list = [InfoTab(self), ColorTab(self), ToneTab(self), GrayTab(self), MorphTab(self),
                          FiltersTab(self), FeaturesTab(self), SimilarityTab(self), VideoTab(self)]
         for tab in self.tab_list:
             self.tabs.addTab(tab, tab.TITLE)
+            layout = tab.layout()
+            if layout is not None:                 # больше воздуха вокруг содержимого вкладок
+                layout.setContentsMargins(24, 20, 24, 20)
+                layout.setSpacing(16)
 
         self.build_toolbar()
         self.pixel_label = QLabel("")
+        self.pixel_label.setObjectName("pixelInfo")
         self.statusBar().addPermanentWidget(self.pixel_label)
         self.statusBar().showMessage("Откройте изображение (Ctrl+O), выберите пример или перетащите файл в окно")
         for view in self.findChildren(ImageView):  # у каждой картинки показываем цвет пикселя под курсором
@@ -78,11 +84,16 @@ class MainWindow(QMainWindow):
     def build_toolbar(self):
         toolbar = self.addToolBar("Файл")
         toolbar.setMovable(False)
+        title = QLabel("Обработка изображений")
+        title.setObjectName("appTitle")
+        toolbar.addWidget(title)
+        toolbar.addSeparator()
         open_action = QAction("Открыть…", self)
         open_action.setShortcut("Ctrl+O")
         open_action.setToolTip("Открыть изображение (Ctrl+O)")
         open_action.triggered.connect(self.open_image)
         toolbar.addAction(open_action)
+        toolbar.widgetForAction(open_action).setObjectName("primary")      # главная кнопка — цветная
 
         menu = QMenu(self)
         files = sorted(p for p in SAMPLES_DIR.glob("photo_*") if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
@@ -97,7 +108,11 @@ class MainWindow(QMainWindow):
         examples.setEnabled(bool(files))
         toolbar.addWidget(examples)
 
-        theme_action = QAction("Светлая / тёмная тема", self)
+        spacer = QWidget()                         # растяжка: кнопка темы уезжает вправо
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        toolbar.addWidget(spacer)
+        theme_action = QAction("◐  Тема", self)
+        theme_action.setToolTip("Светлая / тёмная тема")
         theme_action.triggered.connect(self.toggle_theme)
         toolbar.addAction(theme_action)
 

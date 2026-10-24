@@ -63,6 +63,7 @@ class ImageView(QLabel):
         # Ignored: размер области не зависит от размера картинки внутри (иначе окно будет «расти»)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self._image = None
+        self.setProperty("empty", True)
 
     def image(self):
         """Что сейчас показано (массив NumPy или None)."""
@@ -71,6 +72,9 @@ class ImageView(QLabel):
     def set_image(self, img):
         """Показать массив NumPy. None — очистить."""
         self._image = img
+        self.setProperty("empty", img is None)        # пустая область рисуется пунктиром (см. theme.py)
+        self.style().unpolish(self)
+        self.style().polish(self)
         if img is None:
             self.clear()
             return
@@ -147,34 +151,43 @@ class HistogramView(QWidget):
     def paintEvent(self, event):
         c = theme.COLORS
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(c["hist_bg"]))
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(QColor(c["border"]), 1))
+        painter.setBrush(QColor(c["hist_bg"]))
+        painter.drawRoundedRect(self.rect().adjusted(0, 0, -1, -1), 12, 12)       # карточка со скруглением
         if self.before is None:
             painter.setPen(QColor(c["hist_axis"]))
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Нет данных")
             return
-        width, height = self.width(), self.height()
-        pad = 16
-        plot_h = height - pad - 4
+        left, right, bottom, top_pad = 14, 14, 22, 12
+        plot_w = self.width() - left - right
+        plot_h = self.height() - bottom - top_pad
+        base = self.height() - bottom                          # y нулевой линии
         top = max(1, int(np.max(self.before)))                # шкала по «до»
-        bar_w = width / 256
+        bar_w = plot_w / 256
+
+        painter.setPen(QPen(QColor(c["border"]), 1))           # тонкие линии сетки на 25 / 50 / 75 %
+        for k in (1, 2, 3):
+            y = int(base - plot_h * k / 4)
+            painter.drawLine(left, y, left + plot_w, y)
 
         if self.after is not None:
             painter.setPen(Qt.PenStyle.NoPen)
             fill = QColor(self.color)
-            fill.setAlpha(190)
+            fill.setAlpha(170)
             painter.setBrush(fill)
             for v in range(256):
                 h = min(plot_h, self.after[v] / top * plot_h)
-                painter.drawRect(int(v * bar_w), int(height - pad - h), int(bar_w) + 1, int(h))
+                painter.drawRect(int(left + v * bar_w), int(base - h), int(bar_w) + 1, int(h))
 
-        painter.setPen(QPen(QColor(c["hist_line"]), 1.5))
-        points = [(v * bar_w + bar_w / 2, height - pad - min(plot_h, self.before[v] / top * plot_h))
+        painter.setPen(QPen(QColor(c["hist_line"]), 1.6))
+        points = [(left + v * bar_w + bar_w / 2, base - min(plot_h, self.before[v] / top * plot_h))
                   for v in range(256)]
         for (x1, y1), (x2, y2) in zip(points, points[1:]):
             painter.drawLine(int(x1), int(y1), int(x2), int(y2))
 
         painter.setPen(QColor(c["hist_axis"]))
-        painter.drawLine(0, height - pad, width, height - pad)
-        painter.drawText(2, height - 2, "0")
-        painter.drawText(width // 2 - 8, height - 2, "128")
-        painter.drawText(width - 26, height - 2, "255")
+        painter.drawLine(left, base, left + plot_w, base)
+        painter.drawText(left, self.height() - 6, "0")
+        painter.drawText(left + plot_w // 2 - 8, self.height() - 6, "128")
+        painter.drawText(left + plot_w - 20, self.height() - 6, "255")
