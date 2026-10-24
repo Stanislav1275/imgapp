@@ -22,7 +22,7 @@ python main.py             # запуск приложения
 ```
 python run_demo.py                          # прогоняет все функции, результаты в demo_output/
 python report/make_figures.py               # рисунки для отчёта (нужен matplotlib), результаты в report/figures/
-python -m unittest discover -s tests -t .   # 73 автоматических теста
+python -m unittest discover -s tests -t .   # 76 автоматических тестов
 ```
 
 ## Как устроен проект
