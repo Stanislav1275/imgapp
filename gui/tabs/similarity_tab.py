@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QComboBox, QFileDialog, QHBoxLayout, QLabel, QMes
 
 from core import imageio, similarity
 from gui.tabs.base import BaseTab
-from gui.widgets import ImageView
+from gui.widgets import ImageView, busy
 
 MIN_IMAGES, MAX_IMAGES = 3, 10
 
@@ -30,6 +30,7 @@ class SimilarityTab(BaseTab):
         self.method = QComboBox()
         self.method.addItem("По ключевым точкам SIFT", "sift")
         self.method.addItem("По цветовым гистограммам", "hist")
+        self.method.currentIndexChanged.connect(lambda *_: self.paths and self.compare())   # пересчёт при смене метода
 
         choose = QPushButton("Выбрать {}–{} изображений…".format(MIN_IMAGES, MAX_IMAGES))
         choose.clicked.connect(self.choose_files)
@@ -69,7 +70,8 @@ class SimilarityTab(BaseTab):
         except ValueError as error:
             QMessageBox.warning(self, "Ошибка чтения", str(error))
             return
-        i, j, score, matrix = similarity.most_similar_pair(images, self.method.currentData())
+        with busy():
+            i, j, score, matrix = similarity.most_similar_pair(images, self.method.currentData())
         self.first_view.set_image(images[i])
         self.second_view.set_image(images[j])
         self.first_caption.setText(os.path.basename(self.paths[i]))

@@ -12,7 +12,7 @@ class InfoTab(BaseTab):
 
     def __init__(self, main):
         super().__init__(main)
-        self.view = ImageView("Откройте изображение: кнопка «Открыть…» сверху")
+        self.view = ImageView("Перетащите сюда изображение,\nнажмите «Открыть…» (Ctrl+O)\nили выберите пример")
         self.table = QTableWidget(0, 2)
         self.table.setHorizontalHeaderLabels(["Параметр", "Значение"])
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)

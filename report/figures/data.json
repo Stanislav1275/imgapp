@@ -1,0 +1,148 @@
+{
+ "depth": [
+  {
+   "label": "True Color",
+   "bits": 24,
+   "colors_max": 16777216,
+   "colors_used": 32584,
+   "png_bytes": 218916,
+   "raw_bytes": 405900
+  },
+  {
+   "label": "High Color 5-6-5",
+   "bits": 16,
+   "colors_max": 65536,
+   "colors_used": 1954,
+   "png_bytes": 144275,
+   "raw_bytes": 270600
+  },
+  {
+   "label": "256 цветов",
+   "bits": 8,
+   "colors_max": 256,
+   "colors_used": 256,
+   "png_bytes": 90093,
+   "raw_bytes": 135300
+  },
+  {
+   "label": "16 цветов",
+   "bits": 4,
+   "colors_max": 16,
+   "colors_used": 16,
+   "png_bytes": 35228,
+   "raw_bytes": 67650
+  },
+  {
+   "label": "4 цвета",
+   "bits": 2,
+   "colors_max": 4,
+   "colors_used": 4,
+   "png_bytes": 14368,
+   "raw_bytes": 33825
+  },
+  {
+   "label": "2 цвета, дизеринг",
+   "bits": 1,
+   "colors_max": 2,
+   "colors_used": 2,
+   "png_bytes": 16011,
+   "raw_bytes": 16912
+  }
+ ],
+ "otsu_T_uneven": 80,
+ "hierarchy": {
+  "rows": [
+   [
+    0,
+    1,
+    -1,
+    -1,
+    -1
+   ],
+   [
+    1,
+    2,
+    0,
+    -1,
+    -1
+   ],
+   [
+    2,
+    -1,
+    1,
+    3,
+    -1
+   ],
+   [
+    3,
+    -1,
+    -1,
+    4,
+    2
+   ],
+   [
+    4,
+    -1,
+    -1,
+    5,
+    3
+   ],
+   [
+    5,
+    -1,
+    -1,
+    -1,
+    4
+   ]
+  ],
+  "n_tree": 6,
+  "n_external": 3
+ },
+ "keypoints": {
+  "Харрис": 300,
+  "SIFT": 1105,
+  "FAST": 1872
+ },
+ "similarity": {
+  "a": "photo_chelsea.png",
+  "b": "photo_chelsea_edit.png",
+  "score": 0.6656151419558359,
+  "matrix": [
+   [
+    1.0,
+    0.666,
+    0.007,
+    0.0,
+    0.006
+   ],
+   [
+    0.666,
+    1.0,
+    0.0,
+    0.0,
+    0.009
+   ],
+   [
+    0.007,
+    0.0,
+    1.0,
+    0.107,
+    0.023
+   ],
+   [
+    0.0,
+    0.0,
+    0.107,
+    1.0,
+    0.0
+   ],
+   [
+    0.006,
+    0.009,
+    0.023,
+    0.0,
+    1.0
+   ]
+  ]
+ }
+}

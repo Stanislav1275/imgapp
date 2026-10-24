@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, Q
 
 from core import features
 from gui.tabs.base import BaseTab
-from gui.widgets import ImageView
+from gui.widgets import ImageView, busy
 
 
 class FeaturesTab(BaseTab):
@@ -34,6 +34,7 @@ class FeaturesTab(BaseTab):
         self.sift_points.setValue(0)
         self.sift_points.setSpecialValueText("все")
         run = QPushButton("Найти точки")
+        run.setToolTip("Запустить выбранный детектор на текущем изображении")
         run.clicked.connect(self.run)
 
         self.harris_label = QLabel("Порог (доля от максимума):")
@@ -78,11 +79,12 @@ class FeaturesTab(BaseTab):
         if not self.has_image():
             return
         name = self.detector.currentText()
-        if name == "Харрис":
-            points = features.detect(name, self.main.image, ratio=self.harris_ratio.value())
-        elif name == "FAST":
-            points = features.detect(name, self.main.image, threshold=self.fast_threshold.value())
-        else:
-            points = features.detect(name, self.main.image, max_points=self.sift_points.value())
+        with busy():                                  # SIFT на большой картинке может думать секунду-другую
+            if name == "Харрис":
+                points = features.detect(name, self.main.image, ratio=self.harris_ratio.value())
+            elif name == "FAST":
+                points = features.detect(name, self.main.image, threshold=self.fast_threshold.value())
+            else:
+                points = features.detect(name, self.main.image, max_points=self.sift_points.value())
         self.after_view.set_image(features.draw_points(self.main.image, points))
         self.status.setText("{}: найдено точек — {}".format(name, len(points)))

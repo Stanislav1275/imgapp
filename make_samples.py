@@ -1,85 +1,72 @@
 """
-Создаёт тестовые данные в папке samples/ (чтобы было на чём проверять программу):
-    scene.png           — «пейзаж» с домиком, солнцем и небом
-    scene_rotated.png   — та же сцена, чуть повёрнутая и темнее (похожа на scene.png)
-    pattern_a.png, pattern_b.png — две несвязанные картинки (для поиска похожих)
-    noisy.png           — сцена с шумом «соль и перец» (для медианного фильтра)
-    moving.avi          — видео: яркий шар катится по фону (для вычитания фона)
+Создаёт примеры в папке samples/ из СВОБОДНЫХ фотографий, которые входят в пакет scikit-image
+(в готовом архиве проекта папка samples/ уже заполнена, запускать этот файл не обязательно).
 
-Запуск:  python make_samples.py
+Что получится:
+    photo_coffee.jpg        чашка кофе — цвета, яркость, фильтры (формат JPEG)
+    photo_chelsea.png       кот — ключевые точки, поиск похожих
+    photo_chelsea_edit.png  тот же кот: повёрнут, уменьшен, темнее (для поиска похожих)
+    photo_astronaut.png     портрет астронавта — ключевые точки, поиск похожих
+    photo_rocket.png        запуск ракеты — поиск похожих
+    photo_coins.png         монеты (серое 8 бит) — бинаризация, морфология, контуры
+    photo_noisy.png         кот с шумом «соль и перец» — медианный фильтр
+    moving.avi              видео: по фону-фотографии летят мяч и коробка — вычитание фона
+
+Источники (по документации scikit-image, раздел skimage.data): astronaut — NASA, общественное достояние;
+coffee и chelsea (кот) — лицензия CC0; coins, rocket — свободные изображения из набора данных scikit-image.
+Проверьте условия использования, если планируете публиковать картинки отдельно от проекта.
+
+Запуск:  pip install scikit-image   (нужен только для этого файла)
+         python make_samples.py
 """
 import os
 
 import cv2
 import numpy as np
+from skimage import data
+
+from core import filters, imageio
 
 OUT = "samples"
 
 
-def make_scene():
-    h, w = 300, 480
-    img = np.zeros((h, w, 3), np.uint8)
-    # небо: вертикальный градиент от синего к светло-голубому
-    for y in range(190):
-        t = y / 189
-        img[y, :] = (int(47 + 170 * t), int(111 + 125 * t), int(181 + 66 * t))
-    # земля: градиент зелёного
-    for y in range(190, h):
-        t = (y - 190) / (h - 191)
-        img[y, :] = (int(79 - 50 * t), int(138 - 80 * t), int(60 - 37 * t))
-    cv2.circle(img, (400, 60), 34, (246, 209, 74), -1)                 # солнце
-    cv2.rectangle(img, (60, 110), (190, 220), (150, 90, 60), -1)       # стены дома
-    cv2.fillPoly(img, [np.array([(50, 110), (125, 55), (200, 110)])], (60, 60, 140))   # крыша
-    for x in (80, 125, 160):
-        cv2.rectangle(img, (x - 10, 135), (x + 10, 165), (240, 240, 240), -1)           # окна
-    cv2.rectangle(img, (115, 180), (140, 220), (80, 50, 30), -1)                        # дверь
-    cv2.rectangle(img, (260, 150), (330, 225), (200, 60, 60), -1)                       # красный сарай
-    cv2.circle(img, (300, 205), 12, (30, 30, 30), -1)
-    return img
+def path(name):
+    return os.path.join(OUT, name)
 
 
-def make_pattern(seed):
-    rng = np.random.default_rng(seed)
-    small = rng.integers(0, 256, (20, 30, 3), dtype=np.uint8)
-    return cv2.resize(small, (480, 300), interpolation=cv2.INTER_CUBIC)
-
-
-def save_rgb(name, img_rgb):
-    cv2.imwrite(os.path.join(OUT, name), cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))
-
-
-def make_video(path, frames=90, w=320, h=200):
-    writer = cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"MJPG"), 25, (w, h))
-    bg = np.zeros((h, w, 3), np.uint8)
-    for y in range(h):
-        bg[y, :] = (60 + y // 4, 90 + y // 5, 120)
-    cv2.rectangle(bg, (0, 150), (w, h), (50, 90, 50), -1)
+def make_video(file, background, frames=100):
+    h, w = background.shape[:2]
+    writer = cv2.VideoWriter(file, cv2.VideoWriter_fourcc(*"MJPG"), 25, (w, h))
     for t in range(frames):
-        frame = bg.copy()
-        x = 20 + int(t * (w - 60) / frames)
-        y = 120 + int(15 * np.sin(t / 6))
-        cv2.circle(frame, (x, y), 18, (250, 220, 60), -1)
-        cv2.circle(frame, (x - 5, y - 5), 5, (255, 255, 255), -1)
-        writer.write(frame)
+        frame = background.copy()
+        # жёлтый мяч летит слева направо по волне
+        x = int(30 + t * (w - 60) / frames)
+        y = int(h * 0.45 + 40 * np.sin(t / 7))
+        cv2.circle(frame, (x + 6, y + 8), 22, (40, 40, 40), -1)            # тень
+        cv2.circle(frame, (x, y), 22, (250, 210, 40), -1)
+        cv2.circle(frame, (x - 7, y - 7), 6, (255, 255, 255), -1)
+        # красная коробка едет справа налево внизу
+        bx = int(w - 40 - t * (w - 110) / frames)
+        cv2.rectangle(frame, (bx, int(h * 0.78)), (bx + 46, int(h * 0.78) + 34), (200, 50, 50), -1)
+        cv2.rectangle(frame, (bx, int(h * 0.78)), (bx + 46, int(h * 0.78) + 34), (255, 255, 255), 2)
+        writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
     writer.release()
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    scene = make_scene()
-    save_rgb("scene.png", scene)
-    matrix = cv2.getRotationMatrix2D((240, 150), 6, 0.92)
-    rotated = cv2.warpAffine(scene, matrix, (480, 300), borderMode=cv2.BORDER_REFLECT)
-    save_rgb("scene_rotated.png", (rotated * 0.85).astype(np.uint8))
-    save_rgb("pattern_a.png", make_pattern(1))
-    save_rgb("pattern_b.png", make_pattern(2))
-    noisy = scene.copy()
-    rng = np.random.default_rng(0)
-    mask = rng.random(scene.shape[:2])
-    noisy[mask < 0.03] = 0
-    noisy[mask > 0.97] = 255
-    save_rgb("noisy.png", noisy)
-    make_video(os.path.join(OUT, "moving.avi"))
+    chelsea = data.chelsea()
+    imageio.save_image(path("photo_coffee.jpg"), data.coffee())
+    imageio.save_image(path("photo_chelsea.png"), chelsea)
+    h, w = chelsea.shape[:2]
+    matrix = cv2.getRotationMatrix2D((w / 2, h / 2), 7, 0.9)
+    edited = cv2.warpAffine(chelsea, matrix, (w, h), borderMode=cv2.BORDER_REFLECT)
+    imageio.save_image(path("photo_chelsea_edit.png"), (edited * 0.8).astype(np.uint8))
+    imageio.save_image(path("photo_astronaut.png"), data.astronaut())
+    imageio.save_image(path("photo_rocket.png"), data.rocket())
+    imageio.save_image(path("photo_coins.png"), data.coins())
+    imageio.save_image(path("photo_noisy.png"), filters.add_salt_pepper(chelsea, 0.06, seed=0))
+    make_video(path("moving.avi"), chelsea)
     print("Готово: файлы в папке", OUT)
 
 

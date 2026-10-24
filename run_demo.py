@@ -35,7 +35,7 @@ def hist_picture(hists, colors, width=512, height=200):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    path = "samples/scene.png"
+    path = "samples/photo_coffee.jpg"
     img = imageio.load_image(path)
 
     print("== Информация о файле ==")
@@ -65,8 +65,9 @@ def main():
     save("10_gray_log.png", tone.log_transform(gray))
     save("11_gray_equalize.png", tone.equalize(gray))
 
-    bw, T = binarize.otsu(gray)
-    print("== Порог Оцу ==", T)
+    coins = tone.to_gray(imageio.load_image("samples/photo_coins.png"))      # монеты: классика для бинаризации
+    bw, T = binarize.otsu(coins)
+    print("== Порог Оцу (монеты) ==", T)
     save("12_binary_otsu.png", bw)
     kernel = morphology.make_kernel(size=5)
     for code in morphology.OPERATIONS.values():
@@ -75,19 +76,21 @@ def main():
     save("14_sharpen.png", filters.sharpen(img, 1.0))
     save("15_motion_blur.png", filters.motion_blur(img, 21, 20))
     save("16_emboss.png", filters.emboss(img))
-    noisy = imageio.load_image("samples/noisy.png")
+    noisy = imageio.load_image("samples/photo_noisy.png")
     save("17_noisy.png", noisy)
     save("18_median.png", filters.median(noisy, 3))
 
     save("19_canny.png", edges.canny(gray, 80, 160))
     save("20_roberts.png", edges.roberts(gray, normalize=True))
 
+    astronaut = imageio.load_image("samples/photo_astronaut.png")
     for name in features.DETECTORS:
-        points = features.detect(name, img)
+        points = features.detect(name, astronaut)
         print("== Ключевые точки: {} -> {} шт.".format(name, len(points)))
-        save("21_points_{}.png".format(name), features.draw_points(img, points))
+        save("21_points_{}.png".format(name), features.draw_points(astronaut, points))
 
-    names = ["scene.png", "scene_rotated.png", "pattern_a.png", "pattern_b.png"]
+    names = ["photo_chelsea.png", "photo_chelsea_edit.png", "photo_astronaut.png", "photo_rocket.png",
+             "photo_coffee.jpg"]
     images = [imageio.load_image("samples/" + n) for n in names]
     i, j, score, matrix = similarity.most_similar_pair(images)
     print("== Самые похожие: {} и {} (оценка {:.3f})".format(names[i], names[j], score))

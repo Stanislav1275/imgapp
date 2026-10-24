@@ -26,6 +26,10 @@ class ToneTab(BaseTab):
         self.contrast = make_slider(-100, 100, 0, self.update_view)
         self.gamma = make_slider(20, 300, 100, self.update_view)
         self.saturation = make_slider(0, 200, 100, self.update_view)
+        self.brightness.setToolTip("Прибавляет число β ко всем пикселям: s = r + β")
+        self.contrast.setToolTip("Растягивает разницу от середины 128 в α раз: s = α·(r − 128) + 128")
+        self.gamma.setToolTip("Степень яркости: s = 255·(r/255)^γ. γ < 1 осветляет, γ > 1 затемняет")
+        self.saturation.setToolTip("Отодвигает цвета от серого в k раз; k = 0 даёт серое изображение")
         self.labels = [QLabel() for _ in range(4)]
 
         controls = QGroupBox("Параметры")

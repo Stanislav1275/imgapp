@@ -1,0 +1,3 @@
+# Нужно только для make_samples.py и report/make_figures.py
+scikit-image>=0.21
+matplotlib>=3.7

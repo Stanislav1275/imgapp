@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QComboBox, QFileDialog, QHBoxLayout, QLabel, QMes
 
 from core import video
 from gui.tabs.base import BaseTab
-from gui.widgets import ImageView
+from gui.widgets import ImageView, busy
 
 MODES = [("Маска движения (вычитание фона)", "mask"),
          ("Только движущиеся объекты", "foreground"),
@@ -121,6 +121,7 @@ class VideoTab(BaseTab):
             return
         self.timer.stop()
         self.play_button.setText("Пуск")
-        video.process_video(self.path, self.mode.currentData(), out_path=out)
+        with busy():
+            video.process_video(self.path, self.mode.currentData(), out_path=out)
         self.status.setText("Сохранено: {}".format(out))
         self.restart()
