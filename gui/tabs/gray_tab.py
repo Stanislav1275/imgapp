@@ -41,7 +41,8 @@ class GrayTab(BaseTab):
         controls = QHBoxLayout()
         controls.addWidget(QLabel("Преобразование серого:"))
         controls.addWidget(self.method)
-        controls.addWidget(QLabel("γ (для гаммы):"))
+        self.gamma_label = QLabel("γ:")
+        controls.addWidget(self.gamma_label)
         controls.addWidget(self.gamma)
         controls.addStretch(1)
 
@@ -109,7 +110,9 @@ class GrayTab(BaseTab):
             result = self.current_binary()[0]
         else:
             result = gray
-        self.binarization_row.setVisible(code == "binary")
+        self.binarization_row.setVisible(code == "binary")       # у каждого метода показываем только его настройки
+        self.gamma_label.setVisible(code == "gamma")
+        self.gamma.setVisible(code == "gamma")
         self.color_view.set_image(img)
         self.result_view.set_image(result)
         if self.otsu.isChecked():                   # показать найденный порог на ползунке
