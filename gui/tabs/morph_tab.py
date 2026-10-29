@@ -31,9 +31,10 @@ class MorphTab(BaseTab):
         self.size.setValue(5)
         self.iterations = QSpinBox()
         self.iterations.setRange(1, 10)
-        self.otsu = QCheckBox("Порог по Оцу")
+        self.otsu = QCheckBox("Порог по Оцу (авто)")
+        self.otsu.setToolTip("Включено: порог подбирается сам. Подвиньте ползунок — включится ручной порог.")
         self.otsu.setChecked(True)
-        self.threshold = make_slider(0, 255, 128, self.update_view)
+        self.threshold = make_slider(0, 255, 128, self.on_slider)
         self.threshold_label = QLabel("T = 128")
         self.invert = QCheckBox("Инвертировать (объекты — тёмные)")
 
@@ -65,6 +66,14 @@ class MorphTab(BaseTab):
         layout.addLayout(row2)
         layout.addLayout(images, 1)
         layout.addWidget(self.note)
+
+    def on_slider(self, *_):
+        """Пользователь двигает ползунок руками: значит, нужен ручной порог, и «Порог по Оцу» выключаем."""
+        if self.otsu.isChecked():
+            self.otsu.blockSignals(True)
+            self.otsu.setChecked(False)
+            self.otsu.blockSignals(False)
+        self.update_view()
 
     def on_image_changed(self):
         self.update_view()
