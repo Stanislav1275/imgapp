@@ -2,7 +2,7 @@
 Вкладка «Серое»: перевод в градации серого, линейная / нелинейная коррекция и бинаризация
 (порог вручную или по Оцу). Бинарное изображение отсюда берёт вкладка «Морфология».
 """
-from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QVBoxLayout
+from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core import binarize, histogram, tone
 from gui.tabs.base import BaseTab, make_slider
@@ -15,6 +15,7 @@ CORRECTIONS = [
     ("Нелинейная: гамма", "gamma"),
     ("Нелинейная: логарифм", "log"),
     ("Нелинейная: выравнивание гистограммы", "equalize"),
+    ("Бинаризация: порог или Оцу", "binary"),
 ]
 
 
@@ -23,10 +24,8 @@ class GrayTab(BaseTab):
 
     def __init__(self, main):
         super().__init__(main)
-        self.color_view = ImageView("цветное")
-        self.gray_view = ImageView("серое")
-        self.result_view = ImageView("после коррекции")
-        self.binary_view = ImageView("чёрно-белое")
+        self.color_view = ImageView("исходное")
+        self.result_view = ImageView("результат")
         self.hist = HistogramView()
 
         self.method = QComboBox()
@@ -40,7 +39,7 @@ class GrayTab(BaseTab):
         self.gamma.valueChanged.connect(self.update_view)
 
         controls = QHBoxLayout()
-        controls.addWidget(QLabel("Коррекция серого:"))
+        controls.addWidget(QLabel("Преобразование серого:"))
         controls.addWidget(self.method)
         controls.addWidget(QLabel("γ (для гаммы):"))
         controls.addWidget(self.gamma)
@@ -51,18 +50,20 @@ class GrayTab(BaseTab):
         self.otsu.toggled.connect(self.update_view)
         self.threshold = make_slider(0, 255, 128, self.on_slider)
         self.threshold_label = QLabel("T = 128")
-        binarization = QHBoxLayout()
-        binarization.addWidget(QLabel("Бинаризация:"))
+        binarization = QHBoxLayout()                  # эта строка видна только при методе «Бинаризация»
         binarization.addWidget(self.otsu)
         binarization.addWidget(self.threshold, 1)
         binarization.addWidget(self.threshold_label)
+        self.binarization_row = QWidget()
+        self.binarization_row.setLayout(binarization)
+        binarization.setContentsMargins(0, 0, 0, 0)
 
         images = QHBoxLayout()
-        for view in (self.color_view, self.gray_view, self.result_view, self.binary_view):
+        for view in (self.color_view, self.result_view):
             images.addWidget(view)
         layout = QVBoxLayout(self)
         layout.addLayout(controls)
-        layout.addLayout(binarization)
+        layout.addWidget(self.binarization_row)
         layout.addLayout(images, 3)
         layout.addWidget(QLabel("Гистограмма серого: линия — до коррекции, столбики — после."))
         layout.addWidget(self.hist, 1)
@@ -104,16 +105,19 @@ class GrayTab(BaseTab):
             result = tone.log_transform(gray)
         elif code == "equalize":
             result = tone.equalize(gray)
+        elif code == "binary":
+            result = self.current_binary()[0]
         else:
             result = gray
+        self.binarization_row.setVisible(code == "binary")
         self.color_view.set_image(img)
-        self.gray_view.set_image(gray)
         self.result_view.set_image(result)
-        binary, T = self.current_binary()
-        if self.otsu.isChecked():
-            self.threshold.blockSignals(True)       # показать найденный порог на ползунке
+        if self.otsu.isChecked():                   # показать найденный порог на ползунке
+            T = self.current_binary()[1]
+            self.threshold.blockSignals(True)
             self.threshold.setValue(T)
             self.threshold.blockSignals(False)
-        self.threshold_label.setText("T = {}".format(T))
-        self.binary_view.set_image(binary)
+            self.threshold_label.setText("T = {}".format(T))
+        else:
+            self.threshold_label.setText("T = {}".format(self.threshold.value()))
         self.hist.set_data(histogram.compute_histogram(gray), histogram.compute_histogram(result))
