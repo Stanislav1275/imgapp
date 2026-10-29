@@ -4,7 +4,7 @@ import unittest
 import cv2
 import numpy as np
 
-from core import edges, imageio, tone
+from core import edges
 
 
 def vertical_step(size=12):
@@ -12,6 +12,17 @@ def vertical_step(size=12):
     img = np.full((size, size), 50, np.uint8)
     img[:, size // 2:] = 200
     return img
+
+
+def test_scene():
+    """Искусственная картинка из кругов, прямоугольников и слабого шума: не зависит от папки samples."""
+    rng = np.random.default_rng(1)
+    img = np.full((240, 320), 90, np.uint8)
+    cv2.circle(img, (100, 110), 60, 200, -1)
+    cv2.rectangle(img, (180, 40), (290, 150), 30, -1)
+    cv2.circle(img, (230, 190), 35, 160, -1)
+    img = cv2.GaussianBlur(img, (0, 0), 1.0).astype(np.int16) + rng.integers(-6, 7, img.shape)
+    return np.clip(img, 0, 255).astype(np.uint8)
 
 
 class CannySteps(unittest.TestCase):
@@ -56,14 +67,14 @@ class CannySteps(unittest.TestCase):
         self.assertTrue(set(np.unique(steps["edges"]).tolist()) <= {0, 255})
 
     def test_low_threshold_adds_edges(self):
-        gray = tone.to_gray(imageio.load_image("samples/photo_coffee.jpg"))
+        gray = test_scene()
         many = int((edges.canny(gray, 20, 60) > 0).sum())
         few = int((edges.canny(gray, 80, 160) > 0).sum())
         self.assertGreater(many, few)
 
     def test_agrees_with_opencv(self):
         """Наша версия и cv2.Canny (с честным L2-градиентом и тем же сглаживанием) почти не расходятся."""
-        gray = tone.to_gray(imageio.load_image("samples/photo_coffee.jpg"))
+        gray = test_scene()
         own = edges.canny(gray, 50, 150) > 0
         reference = cv2.Canny(cv2.GaussianBlur(gray, (0, 0), 1.4), 50, 150, L2gradient=True) > 0
         overlap = (own & reference).sum() / max(own.sum(), reference.sum())
