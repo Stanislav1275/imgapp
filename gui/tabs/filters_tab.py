@@ -1,11 +1,12 @@
 """
 Вкладка «Фильтры и границы»: резкость, размытие в движении, тиснение, медиана, Canny, Робертс.
 """
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QSpinBox,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox,
                                QVBoxLayout, QWidget)
 
 from core import edges, filters, tone
 from gui.tabs.base import BaseTab
+from gui.steps_dialog import StepsDialog
 from gui.widgets import ImageView
 
 # Какие параметры нужны каждому эффекту (названия — ключи в self.params).
@@ -14,7 +15,7 @@ EFFECTS = [
     ("Размытие в движении", "motion", ["length", "angle"]),
     ("Тиснение", "emboss", []),
     ("Медианный фильтр", "median", ["size"]),
-    ("Границы: Canny", "canny", ["low", "high"]),
+    ("Границы: Canny", "canny", ["low", "high", "sigma"]),
     ("Границы: оператор Робертса", "roberts", []),
 ]
 
@@ -42,6 +43,11 @@ class FiltersTab(BaseTab):
         self.add_param(row, "size", "Окно", QSpinBox, 3, 15, 3, step=2)
         self.add_param(row, "low", "Нижний порог", QSpinBox, 0, 255, 100)
         self.add_param(row, "high", "Верхний порог", QSpinBox, 0, 255, 200)
+        self.add_param(row, "sigma", "Сглаживание σ", QDoubleSpinBox, 0.0, 5.0, 1.4, step=0.1)
+        self.steps_button = QPushButton("Шаги Canny…")
+        self.steps_button.setToolTip("Показать все пять шагов алгоритма Canny на текущем изображении")
+        self.steps_button.clicked.connect(self.show_canny_steps)
+        row.addWidget(self.steps_button)
         self.noise = QCheckBox("Добавить шум «соль и перец» перед обработкой")
         self.noise.toggled.connect(self.update_view)
         row.addStretch(1)
@@ -74,6 +80,7 @@ class FiltersTab(BaseTab):
         needed = next(p for _t, code, p in EFFECTS if code == self.effect.currentData())
         for name, (box, _spin) in self.params.items():
             box.setVisible(name in needed)
+        self.steps_button.setVisible(self.effect.currentData() == "canny")
         self.update_view()
 
     def value(self, name):
@@ -97,8 +104,20 @@ class FiltersTab(BaseTab):
         elif code == "median":
             result = filters.median(source, int(self.value("size")))
         elif code == "canny":
-            result = edges.canny(tone.to_gray(source), int(self.value("low")), int(self.value("high")))
+            result = edges.canny_steps(tone.to_gray(source), int(self.value("low")), int(self.value("high")),
+                                       self.value("sigma"))["edges"]
         else:
             result = edges.roberts(tone.to_gray(source), normalize=True)
         self.before_view.set_image(source)
         self.after_view.set_image(result)
+
+    def show_canny_steps(self):
+        """Кнопка «Шаги Canny…»: окно с шестью картинками — от исходной до итоговых границ."""
+        if not self.has_image():
+            return
+        gray = tone.to_gray(self.main.image)
+        steps = edges.canny_steps(gray, int(self.value("low")), int(self.value("high")), self.value("sigma"))
+        hint = "Пороги: нижний {}, верхний {}, σ = {:.1f}".format(
+            int(self.value("low")), int(self.value("high")), self.value("sigma"))
+        self.steps_dialog = StepsDialog(self, "Canny по шагам", edges.canny_stage_images(gray, steps), hint)
+        self.steps_dialog.show()

@@ -349,6 +349,26 @@ def video_figure():
     grid(items, titles, 4, "fig13_video.png", (3.0, 2.0))
 
 
+def canny_figure(scene):
+    """Шесть шагов Canny на одном снимке и влияние порогов; числа для текста отчёта."""
+    gray = tone.to_gray(scene)
+    steps = edges.canny_steps(gray, 50, 150, 1.4)
+    pictures = edges.canny_stage_images(gray, steps)
+    grid([p for _t, p in pictures], [t for t, _p in pictures], 3, "fig14_canny_steps.png", (3.6, 2.5), cmap="gray")
+    pairs = [(20, 60), (50, 150), (100, 200)]
+    results = [edges.canny(gray, lo, hi) for lo, hi in pairs]
+    grid(results, ["пороги {} / {}: {} точек".format(lo, hi, int((r > 0).sum())) for (lo, hi), r in zip(pairs, results)],
+         3, "fig15_canny_thresholds.png", (3.6, 2.5), cmap="gray")
+    reference = cv2.Canny(cv2.GaussianBlur(gray, (0, 0), 1.4), 50, 150, L2gradient=True) > 0
+    own = steps["edges"] > 0
+    return {"pixels": int(gray.size), "magnitude_over_low": int((steps["magnitude"] >= 50).sum()),
+            "after_nms": int((steps["thin"] >= 50).sum()), "strong": int(steps["strong"].sum()),
+            "weak": int(steps["weak"].sum()), "final": int(own.sum()),
+            "weak_kept": int(own.sum() - steps["strong"].sum()),
+            "opencv_final": int(reference.sum()), "overlap": round(float((own & reference).sum() / max(own.sum(), reference.sum())), 4),
+            "counts_by_thresholds": {"{}/{}".format(lo, hi): int((r > 0).sum()) for (lo, hi), r in zip(pairs, results)}}
+
+
 def main():
     scene = imageio.load_image("samples/photo_coffee.jpg")
     coins = tone.to_gray(imageio.load_image("samples/photo_coins.png"))
@@ -372,6 +392,7 @@ def main():
     a, b, score, matrix = similarity_figure()
     DATA["similarity"] = {"a": a, "b": b, "score": score, "matrix": matrix}
     video_figure()
+    DATA["canny"] = canny_figure(scene)
     with open(os.path.join(OUT, "data.json"), "w", encoding="utf8") as f:
         json.dump(DATA, f, ensure_ascii=False, indent=1)
     print(json.dumps(DATA, ensure_ascii=False, indent=1))
