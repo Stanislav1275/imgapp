@@ -1,7 +1,7 @@
 """
 Вкладка «Фильтры и границы»: резкость, размытие в движении, тиснение, медиана, Canny, Робертс.
 """
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox,
+from PySide6.QtWidgets import (QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox,
                                QVBoxLayout, QWidget)
 
 from core import edges, filters, tone
@@ -15,6 +15,7 @@ EFFECTS = [
     ("Размытие в движении", "motion", ["length", "angle"]),
     ("Тиснение", "emboss", []),
     ("Медианный фильтр", "median", ["size"]),
+    ("Шум «соль и перец»", "noise", []),
     ("Границы: Canny", "canny", ["low", "high", "sigma"]),
     ("Границы: оператор Робертса", "roberts", []),
 ]
@@ -48,8 +49,6 @@ class FiltersTab(BaseTab):
         self.steps_button.setToolTip("Показать все пять шагов алгоритма Canny на текущем изображении")
         self.steps_button.clicked.connect(self.show_canny_steps)
         row.addWidget(self.steps_button)
-        self.noise = QCheckBox("Добавить шум «соль и перец» перед обработкой")
-        self.noise.toggled.connect(self.update_view)
         row.addStretch(1)
 
         images = QHBoxLayout()
@@ -57,7 +56,6 @@ class FiltersTab(BaseTab):
         images.addWidget(self.after_view)
         layout = QVBoxLayout(self)
         layout.addLayout(row)
-        layout.addWidget(self.noise)
         layout.addLayout(images, 1)
         self.on_effect_changed()
 
@@ -93,7 +91,7 @@ class FiltersTab(BaseTab):
         img = self.main.image
         if img is None:
             return
-        source = filters.add_salt_pepper(img, 0.04) if self.noise.isChecked() else img
+        source = img                                # «до» — всегда исходное изображение
         code = self.effect.currentData()
         if code == "sharpen":
             result = filters.sharpen(source, self.value("strength"))
@@ -103,6 +101,8 @@ class FiltersTab(BaseTab):
             result = filters.emboss(source)
         elif code == "median":
             result = filters.median(source, int(self.value("size")))
+        elif code == "noise":
+            result = filters.add_salt_pepper(source, 0.04)
         elif code == "canny":
             result = edges.canny_steps(tone.to_gray(source), int(self.value("low")), int(self.value("high")),
                                        self.value("sigma"))["edges"]
