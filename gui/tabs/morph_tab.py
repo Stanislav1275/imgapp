@@ -1,13 +1,13 @@
 """
 Вкладка «Морфология»: эрозия, дилатация, открытие, закрытие, градиент.
 
-Морфологические операции работают с чёрно-белым изображением, поэтому перед операцией
-картинка автоматически бинаризуется методом Оцу. Вкладка показывает только две картинки:
-исходное и результат.
+Морфологические операции применяются прямо к исходному изображению (для цветного — к каждому
+каналу отдельно): эрозия темнит и «съедает» светлые детали, дилатация их расширяет.
+Вкладка показывает две картинки: исходное и результат.
 """
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout
 
-from core import binarize, morphology, tone
+from core import morphology
 from gui.tabs.base import BaseTab
 from gui.widgets import ImageView
 
@@ -43,7 +43,6 @@ class MorphTab(BaseTab):
         layout = QVBoxLayout(self)
         layout.addLayout(controls)
         layout.addLayout(images, 1)
-        layout.addWidget(QLabel("Перед операцией изображение переводится в чёрно-белое (порог по Оцу)."))
 
     def on_image_changed(self):
         self.update_view()
@@ -52,7 +51,6 @@ class MorphTab(BaseTab):
         img = self.main.image
         if img is None:
             return
-        binary, _ = binarize.otsu(tone.to_gray(img))
         kernel = morphology.make_kernel(morphology.KERNEL_SHAPES["Прямоугольник"], self.size.value())
         self.original_view.set_image(img)
-        self.after_view.set_image(morphology.apply(self.operation.currentData(), binary, kernel))
+        self.after_view.set_image(morphology.apply(self.operation.currentData(), img, kernel))
