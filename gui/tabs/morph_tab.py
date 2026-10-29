@@ -2,12 +2,12 @@
 Вкладка «Морфология»: эрозия, дилатация, открытие, закрытие, градиент.
 
 Морфологические операции работают с бинарным изображением, поэтому цепочка из трёх картинок:
-    1) оригинал  ->  2) чёрно-белое (порог)  ->  3) результат операции.
+    1) оригинал  ->  2) чёрно-белое (порог со вкладки «Серое и бинаризация»)  ->  3) результат операции.
 """
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout)
+from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout)
 
-from core import binarize, morphology, tone
-from gui.tabs.base import BaseTab, make_slider
+from core import morphology
+from gui.tabs.base import BaseTab
 from gui.widgets import ImageView
 
 
@@ -27,14 +27,9 @@ class MorphTab(BaseTab):
         self.size.setRange(1, 31)
         self.size.setSingleStep(2)
         self.size.setValue(5)
-        self.otsu = QCheckBox("Порог подобрать само (Оцу)")
-        self.otsu.setChecked(True)
-        self.threshold = make_slider(0, 255, 128, self.on_slider)
-        self.threshold_label = QLabel("T = 128")
 
         self.operation.currentIndexChanged.connect(self.update_view)
         self.size.valueChanged.connect(self.update_view)
-        self.otsu.toggled.connect(self.update_view)
 
         row1 = QHBoxLayout()
         row1.addWidget(QLabel("Операция:"))
@@ -42,14 +37,9 @@ class MorphTab(BaseTab):
         row1.addWidget(QLabel("Размер ядра:"))
         row1.addWidget(self.size)
         row1.addStretch(1)
-        row2 = QHBoxLayout()
-        row2.addWidget(self.otsu)
-        row2.addWidget(self.threshold, 1)
-        row2.addWidget(self.threshold_label)
-
         images = QHBoxLayout()
         for title, view in (("1. Оригинал", self.original_view),
-                            ("2. Чёрно-белое (по порогу T)", self.before_view),
+                            ("2. Чёрно-белое (из вкладки «Серое и бинаризация»)", self.before_view),
                             ("3. Результат операции", self.after_view)):
             column = QVBoxLayout()
             column.addWidget(QLabel(title))
@@ -58,35 +48,22 @@ class MorphTab(BaseTab):
         self.note = QLabel()
         layout = QVBoxLayout(self)
         layout.addLayout(row1)
-        layout.addLayout(row2)
         layout.addLayout(images, 1)
         layout.addWidget(self.note)
 
-    def on_slider(self, *_):
-        """Ползунок двигают руками: порог ручной, галочку «Оцу» снимаем."""
-        if self.otsu.isChecked():
-            self.otsu.blockSignals(True)
-            self.otsu.setChecked(False)
-            self.otsu.blockSignals(False)
+    def on_image_changed(self):
         self.update_view()
 
-    def on_image_changed(self):
+    def showEvent(self, event):
+        """При переходе на вкладку берём свежую бинаризацию (её могли поменять на соседней вкладке)."""
+        super().showEvent(event)
         self.update_view()
 
     def update_view(self, *_):
         img = self.main.image
         if img is None:
             return
-        gray = tone.to_gray(img)
-        if self.otsu.isChecked():
-            binary, T = binarize.otsu(gray)
-            self.threshold.blockSignals(True)       # показать найденный порог на ползунке
-            self.threshold.setValue(T)
-            self.threshold.blockSignals(False)
-        else:
-            T = self.threshold.value()
-            binary = binarize.threshold(gray, T)
-        self.threshold_label.setText("T = {}".format(T))
+        binary, _ = self.main.tab_list[3].current_binary()      # бинаризация настраивается на вкладке «Серое и бинаризация»
         kernel = morphology.make_kernel(morphology.KERNEL_SHAPES["Прямоугольник"], self.size.value())
         result = morphology.apply(self.operation.currentData(), binary, kernel)
         self.original_view.set_image(img)
