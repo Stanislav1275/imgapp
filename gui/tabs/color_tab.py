@@ -8,9 +8,12 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDoubleSpinBox, QGr
                                QHeaderView, QLabel, QLineEdit, QPushButton, QTableWidget,
                                QTableWidgetItem, QVBoxLayout, QWidget)
 
-from core import colorspaces
+import os
+
+from core import colorspaces, imageconvert
+from gui.channels_dialog import ChannelsDialog
 from gui.tabs.base import BaseTab
-from gui.widgets import ImageView
+from gui.widgets import ImageView, busy
 
 # Для каждой модели: список полей (подпись, минимум, максимум, множитель для показа).
 # Множитель 100 означает, что внутри программы число — доля 0..1, а на экране — проценты.
@@ -58,6 +61,24 @@ class ColorTab(BaseTab):
         self.table.verticalHeader().setVisible(False)
         self.pixel_label = QLabel("Пиксель: не выбран")
 
+        # --- перевод всего изображения ---
+        self.current_model_label = QLabel("Текущая модель: —")
+        self.current_model_label.setWordWrap(True)
+        self.target_box = QComboBox()
+        self.target_box.addItems(colorspaces.MODELS)
+        self.target_box.setCurrentText("HSV")
+        whole_button = QPushButton("Преобразовать изображение")
+        whole_button.setToolTip("Пересчитать всё изображение в выбранную модель и показать её каналы")
+        whole_button.clicked.connect(self.convert_whole_image)
+        whole_box = QGroupBox("Всё изображение")
+        whole_layout = QVBoxLayout(whole_box)
+        whole_layout.addWidget(self.current_model_label)
+        target_row = QHBoxLayout()
+        target_row.addWidget(QLabel("В модель:"))
+        target_row.addWidget(self.target_box, 1)
+        whole_layout.addLayout(target_row)
+        whole_layout.addWidget(whole_button)
+
         side = QVBoxLayout()
         side.addWidget(QLabel("Исходная модель:"))
         side.addWidget(self.model_box)
@@ -70,6 +91,7 @@ class ColorTab(BaseTab):
         side.addWidget(self.swatch)
         side.addWidget(self.pixel_label)
         side.addWidget(self.table, 1)
+        side.addWidget(whole_box)
 
         layout = QHBoxLayout(self)
         layout.addWidget(self.view, 3)
@@ -145,5 +167,24 @@ class ColorTab(BaseTab):
             self.table.setItem(r, 0, QTableWidgetItem(name))
             self.table.setItem(r, 1, QTableWidgetItem(text))
 
+    def convert_whole_image(self):
+        """Кнопка «Преобразовать изображение»: пересчитать в выбранную модель и показать каналы."""
+        if not self.has_image():
+            return
+        target = self.target_box.currentText()
+        with busy():                                   # на большой картинке это занимает пару секунд
+            planes = imageconvert.image_to_model(self.main.image, target)
+            views = imageconvert.planes_for_view(planes, target)
+        source = self.main.file_model[0] if self.main.file_model else "RGB"
+        base = os.path.splitext(os.path.basename(self.main.path))[0] if self.main.path else "image"
+        self.dialog = ChannelsDialog(self, source, target, views, base)   # ссылка нужна, чтобы окно не исчезло
+        self.dialog.show()
+
     def on_image_changed(self):
         self.view.set_image(self.main.image)
+        if self.main.file_model:
+            model, text = self.main.file_model
+            self.current_model_label.setText("Текущая модель файла: {}\n({}).\nВ программе изображение хранится как RGB."
+                                             .format(model, text))
+        else:
+            self.current_model_label.setText("Текущая модель: RGB")

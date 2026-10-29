@@ -15,7 +15,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (QApplication, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
                                QSizePolicy, QTabWidget, QToolButton, QWidget)
 
-from core import colorspaces, imageio
+from core import colorspaces, imageconvert, imageio
 from gui import theme
 from gui.tabs.color_tab import ColorTab
 from gui.tabs.features_tab import FeaturesTab
@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)                  # разрешаем перетаскивать файлы в окно
         self.image = None                          # массив RGB (H, W, 3) или None
         self.path = None                           # путь к файлу
+        self.file_model = None                     # (модель, пояснение): как файл хранит цвет
 
         self.settings = QSettings("imgapp", "imgapp")
         self.dark = str(self.settings.value("dark", "false")) == "true"
@@ -138,6 +139,10 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Ошибка", str(error))
             return
         self.image, self.path = image, path
+        try:
+            self.file_model = imageconvert.file_color_model(path)
+        except OSError:
+            self.file_model = None
         self.settings.setValue("last_dir", str(Path(path).parent))
         self.statusBar().showMessage("{}  ({} x {})".format(path, image.shape[1], image.shape[0]))
         for tab in self.tab_list:
